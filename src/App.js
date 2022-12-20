@@ -1,23 +1,61 @@
-import logo from './logo.svg';
+import { graphql } from "@octokit/graphql";
+import { useEffect, useState } from "react";
 import './App.css';
 
+const graphqlWithAuth = graphql.defaults({
+  headers: {
+    authorization: `token ${process.env.REACT_APP_GITHUB_TOKEN}`,
+  },
+});
+
 function App() {
+  const [discussions, setDiscussions] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const getAgoraStates = async () => {
+    const { repository } = await graphqlWithAuth(`
+      {
+        repository(owner: "codestates-seb", name: "agora-states-fe") {
+          discussions(last: 3) {
+            edges {
+              node {
+                author {
+                  avatarUrl
+                  login
+                }
+                title
+                updatedAt
+                url
+              }
+            }
+          }
+        }
+      }
+    `);
+
+    return repository
+  }
+
+  useEffect(() => {
+    getAgoraStates()
+      .then((repo)=>{
+        setDiscussions(repo.discussions.edges)
+      })
+      .catch((err)=>{
+        console.log(err)
+      })
+  }, [])
+
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      <ul>
+        {discussions.map((el) => 
+          <li>
+              <div>{el.node.title}</div>
+          </li>
+        )}
+      </ul>
     </div>
   );
 }
